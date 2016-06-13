@@ -22,7 +22,7 @@ python3 ubint.py <your-metafile>
 The `<your-metafile>` should be in fellowing form:
 
 ```bash
-/path/to/your/window/file window_center spring constant [temperature]
+/path/to/your/window/file window_center spring_constant [temperature]
 ```
 
 There is a variable of `T` in `ubint.py`, if the `temperature` left blank in the metafile, the default temperature would be variable `T` in the `ubint.py`, or you can set specific temperature for some window.
