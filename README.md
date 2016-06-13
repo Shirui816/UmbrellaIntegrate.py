@@ -67,6 +67,8 @@ The UI algorithm with higher oder terms<sup>[3]</sup> of `A(xi)` is `ubint_ho_de
 
 **Problems occurred at standard normal distributions, maybe the quadruplicate term which even possesses a small value could cause a huge deviation. I should try some systems with non-quadratic potentials.**
 
+**The function `exp(-beta(a1*xi+a2*xi^2+a3*xi^3+a4*xi^4))` and its integration (Normalization factor) give very large value (even inf), this is unable to solve yet.**
+
 ## Ref
 
 1. Kästner, Johannes, and Walter Thiel. “Bridging the Gap between Thermodynamic Integration and Umbrella Sampling Provides a Novel Analysis Method: ‘Umbrella Integration.’” The Journal of Chemical Physics 123, no. 14 (October 8, 2005): 144104. doi:10.1063/1.2052648.
