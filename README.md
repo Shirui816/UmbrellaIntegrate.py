@@ -1,7 +1,7 @@
 # UmbrellaIntegrate.py
 Umbrella Integration<sup>[1]</sup> algorithm of calculating PMF using Python.
 
-[1] Kästner, Johannes, and Walter Thiel. “Bridging the Gap between Thermodynamic Integration and Umbrella Sampling Provides a Novel Analysis Method: ‘Umbrella Integration.’” The Journal of Chemical Physics 123, no. 14 (October 8, 2005): 144104. doi:10.1063/1.2052648.
+<sub><sup>[1] Kästner, Johannes, and Walter Thiel. “Bridging the Gap between Thermodynamic Integration and Umbrella Sampling Provides a Novel Analysis Method: ‘Umbrella Integration.’” The Journal of Chemical Physics 123, no. 14 (October 8, 2005): 144104. doi:10.1063/1.2052648.</sup></sub>
 
 ## Dependence
 
