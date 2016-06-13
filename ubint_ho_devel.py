@@ -95,7 +95,7 @@ def get_para():
         a4 = abs(-G2 * t/(24* k2**2) + t *k3 ** 2/(8 * k2 ** 5))
         NF = simps(EP4(INT_PATH, t, a1, a2, a3, a4), INT_PATH) # Normalization factor of P_i
         NF = nan_to_num(NF)
-        print(NF, xibin)
+        #print(NF, xibin)
         para.append((xibin, a1, a2, a3, a4, k1, k2, k3, k4, G2, K, t, NF))
         ############# 0      1   2   3   4   5   6   7   8   9  10 11 12
 get_para() # this is the most time-consuming part, reading all coordiante files.
