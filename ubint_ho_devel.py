@@ -51,7 +51,7 @@ def a_u4(x, xbin, k1, k2, k3, k4, G2, K, kbT): # $\frac{\partial{A^u}}{\partial{
 def a_u3(x, xbin, k1, k2, k3, k4, G2, K, kbT):
     return(kbT*(x - k1)/k2+kbT * k3/(2*k2**2) * (1-(x-k1)**2/k2)-K*(x-xbin))
 
-def a_u2(x, xbin, k1, k2, k3, k4, G2, K, kbT):
+def a_u2(x, xbin, k1, k2, k3, k4, G2, K, kbT): # Gives the same value as ubint.py
     return(kbT*(x - k1)/k2-K*(x-xbin))
 
 
