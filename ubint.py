@@ -49,9 +49,9 @@ def P(x, ximean, xivar): # Gaussian distribution
 para = []
 def get_para():
     for xifile, K, t, xibin in zip(conf['file'], conf['K'], conf['kbT'], conf['bin']): # t is kbT here
-        xis = loadtxt(xifile).T[1]
-        ximean = xis.mean()
-        xivar = xis.var()
+        wxis = loadtxt(xifile).T[1]
+        ximean = wxis.mean()
+        xivar = wxis.var()
         #print((xibin, ximean, xivar, K))
         para.append((xibin, ximean, xivar, K, t))
 get_para() # this is the most time-consuming part, reading all coordiante files.
