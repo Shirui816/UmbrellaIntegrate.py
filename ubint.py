@@ -86,3 +86,8 @@ o = open('free_py.txt','w')
 for i,j in zip(xis, PMF):
     o.write('%s %s\n' % (i,j))
 o.close()
+
+o = open('mean_force_py.txt','w')
+for i,j in zip(xis, dau_dxis):
+    o.write('%s %s\n' % (i,j))
+o.close()
