@@ -1,6 +1,14 @@
 # UmbrellaIntegrate.py
 Umbrella Integration algorithm of calculating PMF using Python
 
+## Dependence
+
+`Python3`
+`Numpy`
+`pandas` for parsing metafile
+`Scipy` for `simps` integration
+
+
 ## Usage:
 
 ```bash
@@ -16,6 +24,8 @@ The `<your-metafile>` should be in fellowing form:
 ```bash
 /path/to/your/window/file window_center spring constant [temperature]
 ```
+
+There is a variable of `T` in `ubint.py`, if the `temperature` left blank in the metafile, the default temperature would be variable `T` in the `ubint.py`, or you can set specific temperature for some window.
 
 #### Data file for each window
 
