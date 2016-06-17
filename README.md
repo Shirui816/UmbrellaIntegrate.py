@@ -11,8 +11,9 @@ Umbrella Integration<sup>[1]</sup> algorithm of calculating PMF using Python.
 
 ## Usage:
 
+See help:
 ```bash
-python3 ubint.py <your-metafile>
+python3 ubint.py -h
 ```
 
 ### Input
