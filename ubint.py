@@ -39,6 +39,9 @@ MAX_BINS = alvars['max_bin'] # how many bins were used in integration
 class NoTemperatureError(Exception):
 	pass
 
+class MultiPeriodError(Exception):
+	pass
+
 def pbc(r, d):
 	return(r-d*round(r/d))
 
@@ -69,7 +72,7 @@ def a_u(x, xbin, ximean, xivar, K, kbT): # $\frac{\partial{A^u}}{\partial{\xi}$
 
 def pbc_a_u(x, xbin, ximean, xivar, K, kbT):
 	pbcx = pbc(x-xbin,Peri) + xbin
-	return(kbT * (x-ximean)/xivar - K * (pbcx-xbin))
+	return(kbT * (pbcx-ximean)/xivar - K * (pbcx-xbin))
 
 from math import sqrt, pi
 from numpy import exp
@@ -90,6 +93,9 @@ def get_para():
 get_para() # this is the most time-consuming part, reading all coordiante files.
 
 m, M = conf['bin'].min(), conf['bin'].max()
+if Peri < M-m:
+	raise(MultiPeriodError("Only 1 perid data is available!"))
+
 xis = linspace(m, M, MAX_BINS)
 
 def Pi(xi, p, paras):
