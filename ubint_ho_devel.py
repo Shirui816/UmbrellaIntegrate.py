@@ -19,7 +19,7 @@ Written by Shirui shirui816@gmail.com
 time_step coordinate (1-dimentional)
 """
 parser = argparse.ArgumentParser(description=description,formatter_class=RawTextHelpFormatter)
-parser.add_argument('-P','--period',type=float, help='Optional, nonzero val if periodic, 0 for non-periodic system, default is 0', default=0, metavar='val', dest='peri')
+parser.add_argument('-P','--period',type=float, help='Optional, nonzero val if periodic, 0 for non-periodic system, default 0', default=0, metavar='val', dest='peri')
 parser.add_argument('metafile', nargs=None, help='Meta file name') # nargs = 1 for a list
 parser.add_argument('max_bin', nargs=None, help='How many bins were used in integration', type=int)
 parser.add_argument('-T','--temperature', metavar='Temperature', dest='T', default=-1, type=float, help="Optional, set a default temperature globally")
