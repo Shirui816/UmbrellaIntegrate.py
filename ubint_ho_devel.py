@@ -4,6 +4,7 @@ from scipy.constants import Boltzmann as kb
 from scipy.constants import Avogadro as NA
 import numpy
 from pandas import DataFrame as df
+import pandas as pd
 from scipy.stats import kstat, moment
 from scipy.integrate import simps
 import argparse
@@ -19,7 +20,7 @@ Written by Shirui shirui816@gmail.com
 time_step coordinate (1-dimentional)
 """
 parser = argparse.ArgumentParser(description=description,formatter_class=RawTextHelpFormatter)
-parser.add_argument('-P','--period',type=float, help='Optional, nonzero val if periodic, 0 for non-periodic system, default 0', default=0, metavar='val', dest='peri')
+parser.add_argument('-P','--period',type=float, help='Optional, nonzero val if periodic, 0 for non-periodic system, default is 0', default=0, metavar='val', dest='peri')
 parser.add_argument('metafile', nargs=None, help='Meta file name') # nargs = 1 for a list
 parser.add_argument('max_bin', nargs=None, help='How many bins were used in integration', type=int)
 parser.add_argument('-T','--temperature', metavar='Temperature', dest='T', default=-1, type=float, help="Optional, set a default temperature globally")
@@ -123,7 +124,9 @@ INT_PATH = linspace((mconf* 2-2 * Mconf), (2*Mconf-mconf), MAX_BINS * 4) # Enlar
 para = []
 def get_para():
     for xifile, K, t, xibin in zip(conf['file'], conf['K'], conf['kbT'], conf['bin']): # t is kbT here
-        wxis = loadtxt(xifile).T[1]
+        #wxis = loadtxt(xifile).T[1]
+        window_data = pd.read_csv(xifile, delimiter='\s+', names=['time_step', 'xi'])
+        wxis = window_data['xi']
         k1, k2, k3, k4 = kstat(wxis, 1), kstat(wxis, 2), kstat(wxis, 3), kstat(wxis, 4)
         #k1, k2, k3, k4 = moment(wxis, 1), moment(wxis, 2), moment(wxis, 3), moment(wxis, 4)
         G2 = k4/k2**2
