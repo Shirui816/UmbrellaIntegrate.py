@@ -41,6 +41,9 @@ MAX_BINS = alvars['max_bin'] # how many bins were used in integration
 class NoTemperatureError(Exception):
     pass
 
+class MultiPeriodError(Exception):
+    pass
+
 def pbc(r, d):
     return(r-d*round(r/d))
 
@@ -68,6 +71,8 @@ conf = loadmeta(alvars['metafile'])
 conf.sort_values(by='bin')
 
 mconf, Mconf = conf['bin'].min(), conf['bin'].max()
+if Peri < Mconf-mconf:
+    raise(MultiPeriodError("Only 1 perid data is available!"))
 
 xis = linspace(mconf, Mconf, MAX_BINS)
 
