@@ -93,7 +93,7 @@ def get_para():
 get_para() # this is the most time-consuming part, reading all coordiante files.
 
 m, M = conf['bin'].min(), conf['bin'].max()
-if Peri < M-m:
+if  Peri != 0 and Peri < M-m:
 	raise(MultiPeriodError("Only 1 perid data is available!"))
 
 xis = linspace(m, M, MAX_BINS)
