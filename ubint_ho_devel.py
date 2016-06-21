@@ -71,7 +71,7 @@ conf = loadmeta(alvars['metafile'])
 conf.sort_values(by='bin')
 
 mconf, Mconf = conf['bin'].min(), conf['bin'].max()
-if Peri < Mconf-mconf:
+if  Peri != 0 and Peri < Mconf-mconf:
     raise(MultiPeriodError("Only 1 perid data is available!"))
 
 xis = linspace(mconf, Mconf, MAX_BINS)
