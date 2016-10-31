@@ -10,10 +10,8 @@ from argparse import RawTextHelpFormatter
 description="""
 An Umbrella Integration program.
 Written by Shirui shirui816@gmail.com
-
 ### metafile format:
 /window/data window_center sprint_konst [Temperature]
-
 ### window data file format:
 time_step coordinate (1-dimentional)
 """
@@ -23,6 +21,7 @@ parser.add_argument('metafile', nargs=None, help='Meta file name') # nargs = 1 f
 parser.add_argument('max_bin', nargs=None, help='How many bins were used in integration', type=int)
 parser.add_argument('-o','--output', metavar='FreeEnergyFile', help="Optional, use 'free_py.txt' as default", default='free_py.txt', dest='outp')
 parser.add_argument('-T','--temperature', metavar='Temperature', dest='T', default=-1, type=float, help="Optional, set a default temperature globally")
+parser.add_argument('-R','--reduced',metavar='0|1', dest='R',default=0, type=int, help='Is reduced units being used?')
 args = parser.parse_args()
 alvars = vars(args)
 
@@ -31,7 +30,10 @@ alvars = vars(args)
 Peri = alvars['peri']
 O = alvars['outp']
 T = alvars['T']
+R = alvars['R']
 kbT = 'nil'
+if R != 0:
+    kb, NA = 1, 1000 # reduce kb * NA/1000 to 1
 if T != -1:
     kbT = kb * T * NA / 1000
 MAX_BINS = alvars['max_bin'] # how many bins were used in integration
