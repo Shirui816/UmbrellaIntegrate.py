@@ -6,7 +6,7 @@ Umbrella Integration<sup>[1]</sup> algorithm of calculating PMF using Python.
 * `Python3`
 * `Numpy`
 * `pandas` for parsing metafile
-* `Scipy` for `simps` integration
+* `Scipy` for `trapz` integration
 
 
 ## Usage:
