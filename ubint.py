@@ -130,11 +130,11 @@ def get_dau_dxis():
 get_dau_dxis()
 
 dau_dxis = array(dau_dxis)
-from scipy.integrate import simps
+from scipy.integrate import trapz
 PMF = []
 
 for r in xis:
-    PMF.append(simps(dau_dxis[xis<=r], xis[xis<=r]))
+    PMF.append(trapz(dau_dxis[xis<=r], xis[xis<=r]))
 
 o = open(O,'w')
 for i,j in zip(xis, PMF):
