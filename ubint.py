@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 # Author: shirui <shirui816@gmail.com>
+
 import re
 import warnings
 import argparse
@@ -76,16 +77,9 @@ class NoTemperatureError(Exception):
     pass
 
 
-class MultiPeriodError(Exception):
-    r"""Data range more than 1 period error."""
-
-    pass
-
-
-def pbc(x, y, d):
+def pbc(x, d):
     r"""Period boundary condition."""
-    _ = y - x
-    return _ - d * np.round(_ / d)
+    return x - d * np.round(x / d)
 
 
 for _line in _meta_file:
@@ -108,31 +102,29 @@ for _line in _meta_file:
 _window_info = np.array(_window_info)
 _window_info = _window_info[np.argsort(_window_info.T[2])]
 
-if _period != 0 and max(_min) - min(_min) > _period:
-    raise MultiPeriodError("Only 1 perid data is available!")
+if _period != 0 and max(_min) - min(_min) < _period:
+    warnings.warn("Your sampled data is lesser than 1 period!",
+                  UserWarning)
 
 if _xi_range:
     if min(_min) < _xi_range[0] or max(_min) > _xi_range[1]:
         warnings.warn("Warning, xi range exceeds the sample range!",
                       UserWarning)
-_xi_range = [min(_min), max(_min)]
+
+_xi_range = _xi_range or [min(_min), max(_min)]
 _xis = np.linspace(_xi_range[0], _xi_range[1], _max_bin)
 _xi_mean_w = _window_info.T[0][:, np.newaxis]
 _xi_var_w = _window_info.T[1][:, np.newaxis]
 _xi_center_w = _window_info.T[2][:, np.newaxis]
 _k_w = _window_info.T[3][:, np.newaxis]
 _kbT_w = _window_info.T[4][:, np.newaxis]
-if _period == 0:
-    _dAu_dxis = _kbT_w * (_xis - _xi_mean_w) / _xi_var_w -\
-        _k_w * (_xis - _xi_center_w)
-    _pb_i = 1/np.sqrt(2 * np.pi) * 1 / np.sqrt(_xi_var_w) *\
-        np.exp(-0.5 * (_xis - _xi_mean_w) ** 2 / _xi_var_w)
-else:
-    _pbc_xi = pbc(_xi_center_w, _xis, _period) + _xi_center_w
-    _dAu_dxis = _kbT_w * (_pbc_xi - _xi_mean_w) / _xi_var_w -\
-        _k_w * (_pbc_xi - _xi_center_w)
-    _pb_i = 1/np.sqrt(2 * np.pi) * 1 / np.sqrt(_xi_var_w) *\
-        np.exp(-0.5 * (_pbc_xi - _xi_mean_w) ** 2 / _xi_var_w)
+_pbc_xis = _xis
+if _period != 0:
+    _pbc_xis = pbc(_xis - _xi_mean_w, _period) + _xi_center_w
+_dAu_dxis = _kbT_w * (_pbc_xis - _xi_mean_w) / _xi_var_w -\
+        _k_w * (_pbc_xis - _xi_center_w)
+_pb_i = 1/np.sqrt(2 * np.pi) * 1 / np.sqrt(_xi_var_w) *\
+        np.exp(-0.5 * (_pbc_xis - _xi_mean_w) ** 2 / _xi_var_w)
 _dA_dxis = np.sum(_dAu_dxis * _pb_i, axis=0)
 _pb_xi = np.sum(_pb_i, axis=0)
 _dA_dxis /= _pb_xi
