@@ -5,7 +5,7 @@
 import re
 import warnings
 import argparse
-from scipy.constants import Boltzmann as kb
+from scipy.constants import Boltzmann as KB
 from scipy.constants import Avogadro as NA
 import numpy as np
 import pandas as pd
@@ -63,7 +63,7 @@ _out_put_file.write('#r PMF MF\n')
 _out_put_file.close()
 _out_put_file = open(alvars['out_put'], 'a')
 
-_kb, _NA = (1, 1) if _is_reduced else (kb, NA)
+_kb, _NA = (1, 1) if _is_reduced else (KB, NA)
 if _xi_range:
     assert _xi_range[0] < _xi_range[1], "Give the rigth range!"
 
@@ -129,6 +129,6 @@ _dA_dxis = np.sum(_dAu_dxis * _pb_i, axis=0)
 _pb_xi = np.sum(_pb_i, axis=0)
 _dA_dxis /= _pb_xi
 
-PMF = np.array([trapz(_dA_dxis[_xis <= r], _xis[_xis <= r]) for r in _xis])
-np.savetxt(_out_put_file, np.vstack([_xis, PMF, _dA_dxis]).T, fmt="%.6f")
+_pmf = np.array([trapz(_dA_dxis[_xis <= r], _xis[_xis <= r]) for r in _xis])
+np.savetxt(_out_put_file, np.vstack([_xis, _pmf, _dA_dxis]).T, fmt="%.6f")
 _out_put_file.close()
