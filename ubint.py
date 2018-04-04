@@ -117,23 +117,14 @@ if _xi_range:
                       UserWarning)
 _xi_range = [min(_min), max(_min)]
 _xis = np.linspace(_xi_range[0], _xi_range[1], _max_bin)
-# X with (n_coor, n_dim) and Y with (m_window, 1, n_dim)
-# X - Y yields (n_window, n_coor, n_dim)
-# This is for 1-d case.
 _xi_mean_w = _window_info.T[0][:, np.newaxis]
 _xi_var_w = _window_info.T[1][:, np.newaxis]
 _xi_center_w = _window_info.T[2][:, np.newaxis]
 _k_w = _window_info.T[3][:, np.newaxis]
 _kbT_w = _window_info.T[4][:, np.newaxis]
 if _period == 0:
-    # \partial A/\partial \xi_{bin} =
-    # \sum_i^{window} P_i(\xi_{bin})/(\sum_i^{window} P_i(\xi_{bin})) \times
-    # \partial A_i^u/\partial \xi_{bin}
-    # \partial A_i^u / \xi_{bin}, with shape (n_window, n_xi)
     _dAu_dxis = _kbT_w * (_xis - _xi_mean_w) / _xi_var_w -\
         _k_w * (_xis - _xi_center_w)
-    # N_iP_i(\xi_{bin}), with shape (n_window, n_xi),
-    # all Nis are same in this case
     _pb_i = 1/np.sqrt(2 * np.pi) * 1 / np.sqrt(_xi_var_w) *\
         np.exp(-0.5 * (_xis - _xi_mean_w) ** 2 / _xi_var_w)
 else:
@@ -141,10 +132,7 @@ else:
         _k_w * pbc(_xi_center_w, _xis, _period)
     _pb_i = 1/np.sqrt(2 * np.pi) * 1 / np.sqrt(_xi_var_w) *\
         np.exp(-0.5 * pbc(_xi_mean_w, _xis, _period) ** 2 / _xi_var_w)
-# Sum over windows
 _dA_dxis = np.sum(_dAu_dxis * _pb_i, axis=0)
-# The denominators for each window are same, \sum_i^{window}N_iP_i(\xi_{bin})
-# with shape (n_xi, )
 _pb_xi = np.sum(_pb_i, axis=0)
 _dA_dxis /= _pb_xi
 
