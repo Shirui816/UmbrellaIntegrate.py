@@ -128,10 +128,11 @@ if _period == 0:
     _pb_i = 1/np.sqrt(2 * np.pi) * 1 / np.sqrt(_xi_var_w) *\
         np.exp(-0.5 * (_xis - _xi_mean_w) ** 2 / _xi_var_w)
 else:
-    _dAu_dxis = _kbT_w * pbc(_xi_mean_w, _xis, _period) / _xi_var_w -\
-        _k_w * pbc(_xi_center_w, _xis, _period)
+    _pbc_xi = pbc(_xi_center_w, _xis, _period) + _xi_center_w
+    _dAu_dxis = _kbT_w * (_pbc_xi - _xi_mean_w) / _xi_var_w -\
+        _k_w * (_pbc_xi - _xi_center_w)
     _pb_i = 1/np.sqrt(2 * np.pi) * 1 / np.sqrt(_xi_var_w) *\
-        np.exp(-0.5 * pbc(_xi_mean_w, _xis, _period) ** 2 / _xi_var_w)
+        np.exp(-0.5 * (_pbc_xi - _xi_mean_w) ** 2 / _xi_var_w)
 _dA_dxis = np.sum(_dAu_dxis * _pb_i, axis=0)
 _pb_xi = np.sum(_pb_i, axis=0)
 _dA_dxis /= _pb_xi
