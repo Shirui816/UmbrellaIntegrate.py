@@ -1,142 +1,149 @@
-from sys import argv
-from pylab import *
+
+#!/usr/bin/env python
+# -*- coding:utf-8 -*-
+# Author: shirui <shirui816@gmail.com>
+
+import re
+import warnings
+import argparse
 from scipy.constants import Boltzmann as kb
 from scipy.constants import Avogadro as NA
-import numpy
+import numpy as np
 import pandas as pd
-from pandas import DataFrame as df
-import argparse
 from argparse import RawTextHelpFormatter
-description="""
-An Umbrella Integration program.
+from scipy.integrate import trapz
+
+description = """An Umbrella Integration program.
 Written by Shirui shirui816@gmail.com
 ### metafile format:
 /window/data window_center sprint_konst [Temperature]
 ### window data file format:
 time_step coordinate (1-dimentional)
 """
-parser = argparse.ArgumentParser(description=description,formatter_class=RawTextHelpFormatter)
-parser.add_argument('-P','--period',type=float, help='Optional, nonzero val if periodic, 0 for non-periodic system, default is 0', default=0, metavar='val', dest='peri')
-parser.add_argument('metafile', nargs=None, help='Meta file name') # nargs = 1 for a list
-parser.add_argument('max_bin', nargs=None, help='How many bins were used in integration', type=int)
-parser.add_argument('-o','--output', metavar='FreeEnergyFile', help="Optional, use 'free_py.txt' as default", default='free_py.txt', dest='outp')
-parser.add_argument('-T','--temperature', metavar='Temperature', dest='T', default=-1, type=float, help="Optional, set a default temperature globally")
-parser.add_argument('-R','--reduced',metavar='0|1', dest='R',default=0, type=int, help='Is reduced units being used?')
-args = parser.parse_args()
+
+arg_parser = argparse.ArgumentParser(
+    description=description, formatter_class=RawTextHelpFormatter)
+arg_parser.add_argument('-P', '--period',
+                        default=0, metavar='val', dest='period', type=float,
+                        help='Optional, nonzero val if periodic, 0 for '
+                        'non-periodic system, default is 0.')
+arg_parser.add_argument('-o', '--output',
+                        metavar='Output free energy file',
+                        default='free_py.txt', dest='out_put',
+                        help="Optional, use 'free_py.txt' as default",)
+arg_parser.add_argument('-T', '--temperature',
+                        metavar='Temperature',
+                        dest='temperature', default=-1, type=float,
+                        help="Optional, set a default temperature globally.")
+arg_parser.add_argument('-R', '--reduced',
+                        default=0, type=int, metavar='0|1', dest='is_reduced',
+                        help='Is reduced units being used?')
+arg_parser.add_argument('-X', '--range',
+                        nargs=2, default=None, metavar='Range of xi',
+                        dest='range', type=float,
+                        help="Range of reaction coordinate.")
+arg_parser.add_argument('meta_file',
+                        nargs=None,
+                        help='Meta file name')
+arg_parser.add_argument('max_bin',
+                        type=int, nargs=None,
+                        help='How many bins were used in integration.')
+
+args = arg_parser.parse_args()
 alvars = vars(args)
 
 # Variables
 
-Peri = alvars['peri']
-O = alvars['outp']
-T = alvars['T']
-R = alvars['R']
-kbT = 'nil'
-if R != 0:
-    kb, NA = 1, 1000 # reduce kb * NA/1000 to 1
-if T != -1:
-    kbT = kb * T * NA / 1000
-MAX_BINS = alvars['max_bin'] # how many bins were used in integration
+_period = alvars['period']
+_temperature = alvars['temperature']
+_is_reduced = alvars['is_reduced']
+_max_bin = alvars['max_bin']  # how many bins were used in integration
+_xi_range = alvars['range']
+_out_put_file = open(alvars['out_put'], 'w')
+_out_put_file.write('#r PMF MF\n')
+_out_put_file.close()
+_out_put_file = open(alvars['out_put'], 'a')
+
+_kb, _NA = (1, 1) if _is_reduced else (kb, NA)
+if _xi_range:
+    assert _xi_range[0] < _xi_range[1], "Give the rigth range!"
+
+_meta_file = open(alvars['meta_file'], 'r')
+_window_info, _min = [], []
+
 
 class NoTemperatureError(Exception):
-	pass
+    r"""No temperature error."""
+
+    pass
+
 
 class MultiPeriodError(Exception):
-	pass
+    r"""Data range more than 1 period error."""
+
+    pass
+
 
 def pbc(r, d):
-	return(r-d*round(r/d))
+    r"""Period boundary condition."""
+    return r - d * round(r / d)
 
-def loadmeta(filename):
-    res = []
-    o = open(filename,'r')
-    for l in o:
-        d = {}
-        t = l.split(' ')
-        for m in t:
-            d['file'] = t[0]
-            d['bin'] = float(t[1])
-            d['K'] = float(t[2])
-            try:
-                d['kbT'] = float(t[3]) * kb * NA / 1000
-            except:
-                d['kbT'] = kbT
-                if kbT == 'nil':
-                	raise NoTemperatureError("Sorry, no temperature was given by '-T' option nor the meta file!")
-        res.append(d)
-    return df(res)
 
-conf = loadmeta(alvars['metafile'])
-conf.sort_values(by='bin')
+for _line in _meta_file:
+    if not re.search('^#', _line) is None:
+        continue
+    _line = re.split('\s+', _line.strip())
+    if _temperature == -1 and len(_line) != 4:
+        raise NoTemperatureError("You have not set temperature for this "
+                                 "window or a global temperature!")
+    _window_data = pd.read_csv(_line[0], header=None, squeeze=1,
+                               delim_whitespace=True, comment='#').values[:, 1]
+    center_ = float(_line[1])
+    spring_konst = float(_line[2])
+    kbT = float(_line[3]) if len(_line) == 4 else _kb * _temperature
+    _window_info.append([_window_data.mean(), _window_data.var(),
+                         center_, spring_konst, kbT])
+    _min.append(_window_data.min())
+    _min.append(_window_data.max())
 
-def a_u(x, xbin, ximean, xivar, K, kbT): # $\frac{\partial{A^u}}{\partial{\xi}$
-    return kbT * (x - ximean)/xivar - K * (x - xbin)
+_window_info = np.array(_window_info)
+_window_info = _window_info[np.argsort(_window_info.T[2])]
 
-def pbc_a_u(x, xbin, ximean, xivar, K, kbT):
-	pbcx = pbc(x-xbin,Peri) + xbin
-	return(kbT * (pbcx-ximean)/xivar - K * (pbcx-xbin))
+if _period != 0 and max(_min) - min(_min) > _period:
+    raise MultiPeriodError("Only 1 perid data is available!")
 
-from math import sqrt, pi
-from numpy import exp
-def P(x, ximean, xivar): # Gaussian distribution
-    return 1/(sqrt(2*pi* xivar)) * exp(-0.5 * (x - ximean)**2 / xivar)
+if _xi_range:
+    if min(_min) < _xi_range[0] or max(_min) > _xi_range[1]:
+        warnings.warn("Warning, xi range exceeds the sample range!",
+                      UserWarning)
+_xi_range = [min(_min), max(_min)]
+_xis = np.linspace(_xi_range[0], _xi_range[1], _max_bin)
+# X with (n_coor, n_dim) and Y with (m_window, 1, n_dim)
+# X - Y yields (n_window, n_coor, n_dim)
+# This is for 1-d case.
+_xi_mean_w = _window_info.T[0][:, np.newaxis]
+_xi_var_w = _window_info.T[1][:, np.newaxis]
+_xi_center_w = _window_info.T[2][:, np.newaxis]
+_k_w = _window_info.T[3][:, np.newaxis]
+_kbT_w = _window_info.T[4][:, np.newaxis]
+# \partial A/\partial \xi_{bin} = 
+# \sum_i^{window} P_i(\xi_{bin})/(\sum_i^{window} P_i(\xi_{bin})) \times
+# \partial A_i^u/\partial \xi_{bin}
 
-para = []
-def get_para():
-    for xifile, K, t, xibin in zip(conf['file'], conf['K'], conf['kbT'], conf['bin']): # t is kbT here
-        #wxis = loadtxt(xifile).T[1]
-        window_data = pd.read_csv(xifile, delimiter='\s+', names=['time_step', 'xi'])
-        wxis = window_data['xi']
-        ximean = wxis.mean()
-        xivar = wxis.var()
-        #print((xibin, ximean, xivar, K))
-        para.append((xibin, ximean, xivar, K, t))
-        ############   0      1       2    3  4
-get_para() # this is the most time-consuming part, reading all coordiante files.
+# \partial A_i^u / \xi_{bin}, with shape (n_window, n_xi)
+_dAu_dxis = _kbT_w * (_xis - _xi_mean_w) / _xi_var_w -\
+            _k_w * (_xis - _xi_center_w)
 
-m, M = conf['bin'].min(), conf['bin'].max()
-if  Peri != 0 and Peri < M-m:
-	raise(MultiPeriodError("Only 1 perid data is available!"))
+# N_iP_i(\xi_{bin}), with shape (n_window, n_xi), all Nis are same in this case
+_pb_i = 1/np.sqrt(2 * np.pi) * 1 / np.sqrt(_xi_var_w) *\
+      np.exp(-0.5 * (_xis - _xi_mean_w) ** 2 / _xi_var_w)
+# Sum over windows
+_dA_dxis = np.sum(_dAu_dxis * _pb_i, axis=0)
+# The denominators for each window are same, \sum_i^{window}N_iP_i(\xi_{bin})
+# with shape (n_xi, )
+_pb_xi = np.sum(_pb_i, axis=0)
+_dA_dxis /= _pb_xi
 
-xis = linspace(m, M, MAX_BINS)
-
-def Pi(xi, p, paras):
-    ai = P(xi, p[1], p[2])
-    alsum = 0
-    for pa in paras:
-        alsum += P(xi, pa[1], pa[2])
-    return ai / alsum
-
-def pbcPi(xi, p, paras):
-	ai = P(xi, p[1], p[2])
-	alsum = 0
-	for pa in paras:
-		pbcxi = pbc(xi- pa[0], Peri)+pa[0]
-		alsum += P(pbcxi, pa[1], pa[2])
-	return(ai/alsum)
-
-if not Peri==0:
-	Pi = pbcPi
-	a_u = pbc_a_u
-
-dau_dxis = [] # $\frac{\partial{A^u}}{\partial{\xi}}$
-
-def get_dau_dxis():
-    for xi in xis:
-        dau_dxi = 0
-        for p in para:
-            dau_dxi += a_u(xi, p[0], p[1], p[2], p[3], p[4]) * Pi(xi, p, para)
-        dau_dxis.append(dau_dxi)
-get_dau_dxis()
-
-dau_dxis = array(dau_dxis)
-from scipy.integrate import trapz
-PMF = []
-
-for r in xis:
-    PMF.append(trapz(dau_dxis[xis<=r], xis[xis<=r]))
-
-o = open(O,'w')
-for i,j in zip(xis, PMF):
-    o.write('%s %s\n' % (i,j))
-o.close()
+PMF = np.array([trapz(_dA_dxis[_xis <= r], _xis[_xis <= r]) for r in _xis])
+np.savetxt(_out_put_file, np.vstack([_xis, PMF, _dA_dxis]).T, fmt="%.6f")
+_out_put_file.close()
