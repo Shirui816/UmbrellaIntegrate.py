@@ -1,7 +1,3 @@
-#!/usr/bin/env python
-# -*- coding:utf-8 -*-
-# Author: shirui <shirui816@gmail.com>
-
 import re
 import warnings
 import argparse
@@ -83,9 +79,10 @@ class MultiPeriodError(Exception):
     pass
 
 
-def pbc(r, d):
+def pbc(x, y, d):
     r"""Period boundary condition."""
-    return r - d * round(r / d)
+    _ = y - x
+    return _ - d * round(_ / d) + x
 
 
 for _line in _meta_file:
@@ -125,17 +122,22 @@ _xi_var_w = _window_info.T[1][:, np.newaxis]
 _xi_center_w = _window_info.T[2][:, np.newaxis]
 _k_w = _window_info.T[3][:, np.newaxis]
 _kbT_w = _window_info.T[4][:, np.newaxis]
-# \partial A/\partial \xi_{bin} = 
-# \sum_i^{window} P_i(\xi_{bin})/(\sum_i^{window} P_i(\xi_{bin})) \times
-# \partial A_i^u/\partial \xi_{bin}
-
-# \partial A_i^u / \xi_{bin}, with shape (n_window, n_xi)
-_dAu_dxis = _kbT_w * (_xis - _xi_mean_w) / _xi_var_w -\
-            _k_w * (_xis - _xi_center_w)
-
-# N_iP_i(\xi_{bin}), with shape (n_window, n_xi), all Nis are same in this case
-_pb_i = 1/np.sqrt(2 * np.pi) * 1 / np.sqrt(_xi_var_w) *\
-      np.exp(-0.5 * (_xis - _xi_mean_w) ** 2 / _xi_var_w)
+if _period == 0:
+    # \partial A/\partial \xi_{bin} =
+    # \sum_i^{window} P_i(\xi_{bin})/(\sum_i^{window} P_i(\xi_{bin})) \times
+    # \partial A_i^u/\partial \xi_{bin}
+    # \partial A_i^u / \xi_{bin}, with shape (n_window, n_xi)
+    _dAu_dxis = _kbT_w * (_xis - _xi_mean_w) / _xi_var_w -\
+        _k_w * (_xis - _xi_center_w)
+    # N_iP_i(\xi_{bin}), with shape (n_window, n_xi),
+    # all Nis are same in this case
+    _pb_i = 1/np.sqrt(2 * np.pi) * 1 / np.sqrt(_xi_var_w) *\
+        np.exp(-0.5 * (_xis - _xi_mean_w) ** 2 / _xi_var_w)
+else:
+    _dAu_dxis = _kbT_w * pbc(_xi_mean_w, _xis, _period) / _xi_var_w -\
+        _k_w * pbc(_xi_center_w, _xis, _period)
+    _pb_i = 1/np.sqrt(2 * np.pi) * 1 / np.sqrt(_xi_var_w) *\
+        np.exp(-0.5 * pbc(_xi_mean_w, _xis, _period) ** 2 / _xi_var_w)
 # Sum over windows
 _dA_dxis = np.sum(_dAu_dxis * _pb_i, axis=0)
 # The denominators for each window are same, \sum_i^{window}N_iP_i(\xi_{bin})
