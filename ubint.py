@@ -85,7 +85,7 @@ class MultiPeriodError(Exception):
 def pbc(x, y, d):
     r"""Period boundary condition."""
     _ = y - x
-    return _ - d * round(_ / d)
+    return _ - d * np.round(_ / d)
 
 
 for _line in _meta_file:
