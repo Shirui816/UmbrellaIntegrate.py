@@ -36,6 +36,7 @@ arg_parser.add_argument('-T', '--temperature',
                         help="Optional, set a default temperature globally.")
 arg_parser.add_argument('-R', '--reduced',
                         default=0, type=int, metavar='0|1', dest='is_reduced',
+                        choices=[0, 1],
                         help='Is reduced units being used?')
 arg_parser.add_argument('-X', '--range',
                         nargs=2, default=None, metavar='Range of xi',
