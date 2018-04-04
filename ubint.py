@@ -63,7 +63,7 @@ _out_put_file.write('#r PMF MF\n')
 _out_put_file.close()
 _out_put_file = open(alvars['out_put'], 'a')
 
-_kb, _NA = (1, 1) if _is_reduced else (KB, NA)
+_kb = _is_reduced or KB * NA
 if _xi_range:
     assert _xi_range[0] < _xi_range[1], "Give the rigth range!"
 
