@@ -122,8 +122,14 @@ _kbT_w = _window_info.T[4][:, np.newaxis]
 _pbc_xis = _xis
 if _period != 0:
     _pbc_xis = pbc(_xis - _xi_mean_w, _period) + _xi_center_w
+# \partial A/\partial \xi_{bin} =
+# \sum_i^{window} P_i(\xi_{bin})/(\sum_i^{window} P_i(\xi_{bin})) \times
+# \partial A_i^u/\partial \xi_{bin}
+# \partial A_i^u / \xi_{bin}, with shape (n_window, n_xi)
 _dAu_dxis = _kbT_w * (_pbc_xis - _xi_mean_w) / _xi_var_w -\
         _k_w * (_pbc_xis - _xi_center_w)
+# N_iP_i(\xi_{bin}), with shape (n_window, n_xi),
+# all Nis are same in this case
 _pb_i = 1/np.sqrt(2 * np.pi) * 1 / np.sqrt(_xi_var_w) *\
         np.exp(-0.5 * (_pbc_xis - _xi_mean_w) ** 2 / _xi_var_w)
 _dA_dxis = np.sum(_dAu_dxis * _pb_i, axis=0)
