@@ -66,7 +66,7 @@ _out_put_file = open(alvars['out_put'], 'a')
 
 _kb = _is_reduced or KB * NA
 if _xi_range:
-    assert _xi_range[0] < _xi_range[1], "Give the rigth range!"
+    raise ValueError(r'Give the rigth range of \xi!')
 
 _meta_file = open(alvars['meta_file'], 'r')
 _window_info, _min = [], []
