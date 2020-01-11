@@ -71,7 +71,7 @@ The UI algorithm with higher oder terms<sup>[3]</sup> of `A(xi)` is `ubint_ho_de
 **The function `exp(-beta(a1*xi+a2*xi^2+a3*xi^3+a4*xi^4))` and its integration (Normalization factor) give very large value (even inf), this is unable to solve yet.**
 
 **Solved**
-Use KDE method to `a_i` use `curve_fit` method in an appropriate range, guarantee the convergence of mean force in the whole range. The results are fine.
+Use KDE method to evaluate `a_i` via `curve_fit` with an appropriate range, guarantee the convergence of mean force in the whole range. The results are fine.
 
 ## Ref
 
