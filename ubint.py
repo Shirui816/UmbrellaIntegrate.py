@@ -53,7 +53,7 @@ arg_parser.add_argument('-R', '--reduced',
 arg_parser.add_argument('-Q', '--order',
                         default=2, metavar='order',
                         dest='order', type=int,
-                        help="Order of probability function.")
+                        help="Order of probability function, 0 for pure KDE method.")
 arg_parser.add_argument('meta_file', help='Meta file name')
 arg_parser.add_argument('range', nargs=2, default=None,
                         metavar='Range of xi', type=float,
@@ -68,7 +68,7 @@ alvars = vars(args)
 # Utils
 def pbc(x, d):
     r"""Period boundary condition."""
-    return x - d * np.round(x / d)
+    return x - d * np.floor(x / d + 0.5)
 
 
 # Variables
@@ -100,6 +100,7 @@ min_ = []
 d = xi_range[1] - xi_range[0]
 x = np.linspace(-d, d, max_bin * 2)
 xis = np.linspace(xi_range[0], xi_range[1], max_bin)
+dxi = np.diff(xis)[0]
 dAu_dxis_pb_w = np.zeros((max_bin,))
 pb_xi = np.zeros((max_bin,))
 
@@ -144,7 +145,7 @@ for line in meta_file:
         window_data = window_data - xi_mean_w
         delta_xis = xis - xi_mean_w
         delta_xis_ref = xis - xi_center_w
-    kde = gaussian_kde(window_data)
+    kde = gaussian_kde(window_data, bw_method=0.1)
     pi_w = kde(x)
 
     if order == 2:
@@ -152,54 +153,63 @@ for line in meta_file:
         # and summation of p^b_w
         tmp = 1 / np.sqrt(2 * np.pi) * 1 / np.sqrt(xi_var_w) * \
               np.exp(-0.5 * delta_xis ** 2 / xi_var_w)
-        n_tmp = 1
+        n_tmp = 1.
         dAu_dxis_pb_w += (kbT_w * delta_xis / xi_var_w -
                           k_w * delta_xis_ref) * tmp
-    else:
-        if mode == 'kde':
-            z_ = np.polyfit(x, -kbT_w * np.log(pi_w), order, w=pi_w)
-            # weights are set to be the probability itself, the fitting is
-            # in well accord within the data range. PDF out of the data range
-            # extended by Gaussian KDE is very close to 0.
-            Z_ = np.poly1d(z_)
-            dz_ = np.poly1d(z_[:-1] * np.arange(order, 0, -1))
-            tmp = np.exp(-Z_(delta_xis) / kbT_w)
-            n_tmp = np.sum(tmp)  # normalization factor, simple summation.
-            dAu_dxis_pb_w += (kbT_w * dz_(delta_xis) -
-                              k_w * delta_xis_ref) * tmp / n_tmp
+    elif mode == 'kde' and order > 0:
+        z_ = np.polyfit(x, -kbT_w * np.log(pi_w), order, w=pi_w)
+        # weights are set to be the probability itself, the fitting is
+        # in well accord within the data range. PDF out of the data range
+        # extended by Gaussian KDE is very close to 0.
+        Z_ = np.poly1d(z_)
+        dz_ = np.poly1d(z_[:-1] * np.arange(order, 0, -1))
+        tmp = np.exp(-Z_(delta_xis) / kbT_w)
+        n_tmp = np.sum(tmp)  # normalization factor, simple summation.
+        dAu_dxis_pb_w += (kbT_w * dz_(delta_xis) -
+                          k_w * delta_xis_ref) * tmp / n_tmp
+    elif mode == 'kde' and order == 0:
+        # "pure" kde
+        if period == 0:
+            delta_xis_ext = np.r_[delta_xis, delta_xis[-1] + dxi]
         else:
-            m1 = xi_mean_w
-            m2 = xi_var_w
-            m3 = np.mean(window_data ** 3)
-            m4 = np.mean(window_data ** 4)
-            gamma1 = m3 / m2 ** 1.5
-            gamma2 = m4 / m2 ** 2 - 3
-            a1_w = kbT_w * (0.5 * m3 / m2 ** 2 - m1 / m2)
-            a2_w = kbT_w * (0.5 / m2)
-            a3_w = kbT_w * (-m3 / (6 * m2 ** 3))
-            a4_w = np.abs(kbT_w * (-gamma2 / (24 * m2 ** 2) + m3 ** 2 / (8 * m2 ** 5)))
-            xi_k2_w = kstat(window_data, n=2)
-            # data is unwrapped in the whole period with zero mean,
-            # for lightly skewed data.
-            xi_k3_w = kstat(window_data, n=3)
-            xi_k4_w = kstat(window_data, n=4)
-            xi_g2_w = xi_k4_w / xi_k2_w ** 2
-            if order == 3:
-                tmp = np.exp(-(a1_w * delta_xis + a2_w * delta_xis ** 2 +
-                               a3_w * delta_xis ** 3) / kbT_w)
-                n_tmp = np.sum(tmp)
-                dAu_dxis_pb_w += (kbT_w * delta_xis / xi_k2_w +
-                                  0.5 * kbT_w * xi_k3_w / xi_k2_w ** 2 *
-                                  (1 - delta_xis ** 2 / xi_k2_w) - k_w * delta_xis_ref) * tmp / n_tmp
-            if order == 4:
-                tmp = np.exp(-(a1_w * delta_xis + a2_w * delta_xis ** 2 +
-                               a3_w * delta_xis ** 3 + a4_w * delta_xis ** 4) / kbT_w)
-                n_tmp = np.sum(tmp)
-                dAu_dxis_pb_w += (kbT_w * delta_xis / xi_k2_w + 0.5 * kbT_w * xi_k3_w / xi_k2_w ** 2 *
-                                  (1 - delta_xis ** 2 / xi_k2_w) +
-                                  kbT_w * (0.5 * xi_k3_w ** 2 / xi_k2_w ** 5 -
-                                           1 / 6 * xi_g2_w / xi_k2_w ** 2) *
-                                  delta_xis ** 3 - k_w * delta_xis_ref) * tmp / n_tmp
+            delta_xis_ext = np.r_[delta_xis, pbc(xis[-1] + dxi - xi_mean_w, period)]
+        tmp = kde(delta_xis_ext)[:-1]
+        n_tmp = 1. #np.sum(tmp)
+        dAu_dxis_pb_w += (-kbT_w * np.diff(np.log(kde(delta_xis_ext))) / dxi
+                          - k_w * delta_xis_ref) * tmp / n_tmp
+    elif mode == 'kastner':
+        m1 = xi_mean_w
+        m2 = xi_var_w
+        m3 = np.mean(window_data ** 3)
+        m4 = np.mean(window_data ** 4)
+        gamma1 = m3 / m2 ** 1.5
+        gamma2 = m4 / m2 ** 2 - 3
+        a1_w = kbT_w * (0.5 * m3 / m2 ** 2 - m1 / m2)
+        a2_w = kbT_w * (0.5 / m2)
+        a3_w = kbT_w * (-m3 / (6 * m2 ** 3))
+        a4_w = np.abs(kbT_w * (-gamma2 / (24 * m2 ** 2) + m3 ** 2 / (8 * m2 ** 5)))
+        xi_k2_w = kstat(window_data, n=2)
+        # data is unwrapped in the whole period with zero mean,
+        # for lightly skewed data.
+        xi_k3_w = kstat(window_data, n=3)
+        xi_k4_w = kstat(window_data, n=4)
+        xi_g2_w = xi_k4_w / xi_k2_w ** 2
+        if order == 3:
+            tmp = np.exp(-(a1_w * delta_xis + a2_w * delta_xis ** 2 +
+                           a3_w * delta_xis ** 3) / kbT_w)
+            n_tmp = np.sum(tmp)
+            dAu_dxis_pb_w += (kbT_w * delta_xis / xi_k2_w +
+                              0.5 * kbT_w * xi_k3_w / xi_k2_w ** 2 *
+                              (1 - delta_xis ** 2 / xi_k2_w) - k_w * delta_xis_ref) * tmp / n_tmp
+        if order == 4:
+            tmp = np.exp(-(a1_w * delta_xis + a2_w * delta_xis ** 2 +
+                           a3_w * delta_xis ** 3 + a4_w * delta_xis ** 4) / kbT_w)
+            n_tmp = np.sum(tmp)
+            dAu_dxis_pb_w += (kbT_w * delta_xis / xi_k2_w + 0.5 * kbT_w * xi_k3_w / xi_k2_w ** 2 *
+                              (1 - delta_xis ** 2 / xi_k2_w) +
+                              kbT_w * (0.5 * xi_k3_w ** 2 / xi_k2_w ** 5 -
+                                       1 / 6 * xi_g2_w / xi_k2_w ** 2) *
+                              delta_xis ** 3 - k_w * delta_xis_ref) * tmp / n_tmp
     pb_xi += tmp / n_tmp
     min_.append(window_data.min() + xi_mean_w)
     min_.append(window_data.max() + xi_mean_w)
@@ -213,6 +223,7 @@ if period != 0 and max(min_) - min(min_) < period:
                   UserWarning)
 
 dAu_dxis = dAu_dxis_pb_w / pb_xi
+dAu_dxis -= dAu_dxis.mean()  # remove the drifting
 pmf = np.array([simps(dAu_dxis[xis <= r], xis[xis <= r]) for r in xis])
 np.savetxt(out_put_file, np.vstack([xis, pmf, dAu_dxis]).T, fmt="%.6f")
 out_put_file.close()
