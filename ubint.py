@@ -223,7 +223,8 @@ if period != 0 and max(min_) - min(min_) < period:
                   UserWarning)
 
 dAu_dxis = dAu_dxis_pb_w / pb_xi
-dAu_dxis -= dAu_dxis.mean()  # remove the drifting
+if period > 0:
+    dAu_dxis -= dAu_dxis.mean()  # remove the drifting
 pmf = np.array([simps(dAu_dxis[xis <= r], xis[xis <= r]) for r in xis])
 np.savetxt(out_put_file, np.vstack([xis, pmf, dAu_dxis]).T, fmt="%.6f")
 out_put_file.close()
