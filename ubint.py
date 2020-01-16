@@ -88,10 +88,13 @@ meta_file = open(alvars['meta_file'], 'r')
 kb = is_reduced or KB * NA
 
 if period > 0:
-    xi_range[0] = -period / 2
-    xi_range[1] = period / 2
+    x0, xt = xi_range
+    if not np.allclose(xt - x0, period):
+        raise ValueError("The data range is not equal to period!")
     print("Peroid is set to %.2f, the data range is set to (-%.2f, %.2f]!"
           % (period, period / 2, period / 2))
+    xi_range[0] = -period / 2
+    xi_range[1] = period / 2
 
 if order > 4 and mode == 'kastner':
     raise ValueError("The order of kastner method is up to 4!")
@@ -129,8 +132,10 @@ for line in meta_file:
     k_w = float(line[2])
     kbT_w = float(line[3]) if len(line) == 4 else kb * temperature
     if period > 0:
+        window_data = window_data - x0 + xi_range[0]  # move data to -P/2, P/2
         xi_mean_w = circmean(window_data, high=period / 2, low=-period / 2)
         window_data = pbc(window_data - xi_mean_w, period)
+        # unwrap data
         # move the MEAN of the distribution to 0, only for relatively
         # symmetric distributions. If the distribution is heavily skewed,
         # the distribution should be "unwrapped" into a whole period and
@@ -145,9 +150,10 @@ for line in meta_file:
         window_data = window_data - xi_mean_w
         delta_xis = xis - xi_mean_w
         delta_xis_ref = xis - xi_center_w
-    kde = gaussian_kde(window_data, bw_method=0.1)
-    pi_w = kde(x)
-
+    if mode == 'kde':
+        kde = gaussian_kde(window_data, bw_method=0.1)
+        pi_w = kde(x)
+        pi_w = np.where(pi_w > 0, pi_w, 1e-100)  # avoid 0 for np.log
     if order == 2:
         # evaluate \partial A^{ub}_w / \partial \xi \times P^b_w(\xi)
         # and summation of p^b_w
@@ -158,6 +164,7 @@ for line in meta_file:
                           k_w * delta_xis_ref) * tmp
     elif mode == 'kde' and order > 0:
         z_ = np.polyfit(x, -kbT_w * np.log(pi_w), order, w=pi_w)
+        # Fit the probability if the extended results of kde is not trusted
         # weights are set to be the probability itself, the fitting is
         # in well accord within the data range. PDF out of the data range
         # extended by Gaussian KDE is very close to 0.
@@ -168,13 +175,13 @@ for line in meta_file:
         dAu_dxis_pb_w += (kbT_w * dz_(delta_xis) -
                           k_w * delta_xis_ref) * tmp / n_tmp
     elif mode == 'kde' and order == 0:
-        # "pure" kde
+        # "pure" kde method
         if period == 0:
             delta_xis_ext = np.r_[delta_xis, delta_xis[-1] + dxi]
         else:
             delta_xis_ext = np.r_[delta_xis, pbc(xis[-1] + dxi - xi_mean_w, period)]
         tmp = kde(delta_xis_ext)[:-1]
-        n_tmp = 1. #np.sum(tmp)
+        n_tmp = np.sum(tmp)
         dAu_dxis_pb_w += (-kbT_w * np.diff(np.log(kde(delta_xis_ext))) / dxi
                           - k_w * delta_xis_ref) * tmp / n_tmp
     elif mode == 'kastner':
@@ -218,15 +225,9 @@ if min(min_) > xi_range[0] or max(min_) < xi_range[1]:
     warnings.warn("Warning, xi range exceeds the sample range!",
                   UserWarning)
 
-if period != 0 and max(min_) - min(min_) < period:
-    warnings.warn("Your sampled data is lesser than 1 period!",
-                  UserWarning)
-
 dAu_dxis = dAu_dxis_pb_w / pb_xi
 if period > 0:
     dAu_dxis -= dAu_dxis.mean()  # remove the drifting
-# in periodic systems, if the distribution is notably skewed,
-# the mean force is drifted...
 pmf = np.array([simps(dAu_dxis[xis <= r], xis[xis <= r]) for r in xis])
 np.savetxt(out_put_file, np.vstack([xis, pmf, dAu_dxis]).T, fmt="%.6f")
 out_put_file.close()
