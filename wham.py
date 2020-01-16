@@ -160,5 +160,5 @@ while True:
         break
     pu_xis_old = pu_xis
 pmf = -kb * temperature * np.log(pu_xis_old)
-np.savetxt(out_put_file, np.vstack([xis, pmf, pu_xis]).T, fmt="%.6f")
+np.savetxt(out_put_file, np.vstack([xis, pmf - pmf.min(), pu_xis]).T, fmt="%.6f")
 out_put_file.close()
