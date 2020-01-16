@@ -42,10 +42,6 @@ arg_parser.add_argument('-o', '--output',
                         metavar='Output free energy file',
                         default='free_py.txt', dest='out_put',
                         help="Optional, use 'free_py.txt' as default", )
-arg_parser.add_argument('-T', '--temperature',
-                        metavar='Temperature',
-                        dest='temperature', default=-1, type=float,
-                        help="Optional, set a default temperature globally.")
 arg_parser.add_argument('-R', '--reduced',
                         default=0, type=int, metavar='0|1', dest='is_reduced',
                         choices=[0, 1],
@@ -60,6 +56,8 @@ arg_parser.add_argument('range', nargs=2, default=None,
                         help="Range of reaction coordinate.")
 arg_parser.add_argument('max_bin', type=int,
                         help='How many bins were used in integration.')
+arg_parser.add_argument('temperature', metavar='Temperature', type=float,
+                        help="Temperature.")
 
 args = arg_parser.parse_args()
 alvars = vars(args)
@@ -108,11 +106,6 @@ dAu_dxis_pb_w = np.zeros((max_bin,))
 pb_xi = np.zeros((max_bin,))
 
 
-class NoTemperatureError(Exception):
-    r"""No temperature error."""
-    pass
-
-
 def pbc(x, d):
     r"""Period boundary condition."""
     return x - d * np.round(x / d)
@@ -123,9 +116,10 @@ for line in meta_file:
     if not re.search('^#', line) is None:
         continue
     line = re.split('\s+', line.strip())
-    if temperature == -1 and len(line) != 4:
-        raise NoTemperatureError("You have not set temperature for this "
-                                 "window or a global temperature!")
+    if len(line) != 4:
+        warnings.warn("Temperature is not assigned for window %d,"
+                      "I will use the default temperature!" % (i),
+                      UserWarning)
     window_data = pd.read_csv(line[0], header=None, squeeze=1,
                               delim_whitespace=True, comment='#').values[:, 1]
     xi_center_w = float(line[1])
@@ -163,7 +157,7 @@ for line in meta_file:
         dAu_dxis_pb_w += (kbT_w * delta_xis / xi_var_w -
                           k_w * delta_xis_ref) * tmp
     elif mode == 'kde' and order > 0:
-        z_ = np.polyfit(x, -kbT_w * np.log(pi_w), order, w=pi_w)
+        z_ = np.polyfit(x, -kbT_w * np.log(pi_w), order, w=pi_w / pi_w.max())
         # Fit the probability if the extended results of kde is not trusted
         # weights are set to be the probability itself, the fitting is
         # in well accord within the data range. PDF out of the data range
