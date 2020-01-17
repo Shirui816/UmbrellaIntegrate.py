@@ -17,6 +17,7 @@ description = """WHAM.py (Gaussian KDE version).
 Written by Shirui shirui816@gmail.com
 Bootstrap enhance sampling method is on the way.
 I will aslo try GAN to enhance sampling.
+Multi-dimension version is also on the way.
 ### metafile format:
 /window/data window_center sprint_konst [Temperature]
 ### window data file format:
