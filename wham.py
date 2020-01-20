@@ -151,7 +151,7 @@ for i, line in enumerate(meta_file):
         xi_var_w = np.cov(window_data_uwp.T)
         pb_w_xis[i] = multivariate_normal.pdf(delta_xis, mean=[0] * n_dim, cov=xi_var_w)
         # kde and gauss mode share the same idea: calculate P(\xi) from "unwrapped" distribution
-        # if the system is no periodic, "unwrapped" represents P(\xi-\overline{\xi})
+        # if the system is not periodic, "unwrapped" means P(\xi-\overline{\xi})
 
 pb_w_xis = pb_w_xis / pb_w_xis.sum(axis=tuple(range(1, n_dim + 1)), keepdims=True)
 pu_xis_old = np.zeros(max_bin)
