@@ -141,7 +141,10 @@ for i, line in enumerate(meta_file):
         kde = gaussian_kde(window_data_uwp.T)
         positions = np.vstack([_.ravel() for _ in delta_xis.swapaxes(0, -1)])
         pb_w_xis[i] = np.reshape(kde(positions).T, grid[0].shape).T
-        # not exactly same with the example on the docs of scipy, figure why
+        # not exactly same with the example on the docs of scipy:
+        # the example is using np.mgrid, but I use np.meshgrid, these 2
+        # arrays are transposed to each other, the raveled array used in position
+        # is C order in the example and Fortran's order if np.meshgrid is used.
     if mode == 'histogram':
         pb_w_xis[i], _ = np.histogramdd(window_data, bins=max_bin, range=xi_range, density=True)
     if mode == 'gauss':
