@@ -61,6 +61,12 @@ def pbc(x, d):
     return x - d * np.floor(x / d + 0.5)
 
 
+def my_einsum(*operands):
+    from numpy.core.einsumfunc import _parse_einsum_input
+    operands = _parse_einsum_input(operands)
+    return np.einsum("->".join(operands[:-1]), *operands[-1])
+
+
 # Variables
 temperature = alvars['temperature']
 is_reduced = alvars['is_reduced']
@@ -95,11 +101,6 @@ grid = np.meshgrid(*[np.linspace(_[0], _[1], __) for _, __ in zip(xi_range, max_
 grid = np.array(grid)
 xis = np.vstack([_.ravel() for _ in grid])
 box = np.atleast_2d(period)
-
-
-def pbc(x, d):
-    r"""Period boundary condition."""
-    return x - d * np.round(x / d)
 
 
 for i, line in enumerate(meta_file):
@@ -162,9 +163,10 @@ while True:
     #p^{ub}_wijkl... = p^b_wijkl... / f_wC_wijkl...
     pu_xis = np.sum(pb_w_xis, axis=0) / np.einsum('i,i...->...', f_w, bias_w_xis)
     pu_xis = pu_xis / pu_xis.sum()
-    # f_w = 1 / C_wijkl...p^{ub}_ijkl...
-    f_w = 1 / np.sum(np.einsum('i...,...->i...', bias_w_xis, pu_xis),
-                     axis=tuple(np.arange(1, n_dim + 1)))
+    #f_w = 1 / C_wijkl...p^{ub}_ijkl...
+    #f_w = 1 / np.sum(np.einsum('i...,...->i...', bias_w_xis, pu_xis),
+    #                 axis=tuple(np.arange(1, n_dim + 1)))
+    f_w = 1 / my_einsum('i...,...->i', bias_w_xis, pu_xis)
     if counter % 1000 == 0:
         print("F for each window (%d):" % (counter))
         for i, line in enumerate(f_w):
