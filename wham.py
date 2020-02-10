@@ -160,12 +160,12 @@ pu_xis_old = np.zeros(max_bin)
 # WHAM iteration
 counter = 0
 while True:
-    #p^{ub}_wijkl... = p^b_wijkl... / f_wC_wijkl...
+    # p^{ub}_wijkl... = p^b_wijkl... / f_wC_wijkl...
     pu_xis = np.sum(pb_w_xis, axis=0) / np.einsum('i,i...->...', f_w, bias_w_xis)
     pu_xis = pu_xis / pu_xis.sum()
-    #f_w = 1 / C_wijkl...p^{ub}_ijkl...
-    #f_w = 1 / np.sum(np.einsum('i...,...->i...', bias_w_xis, pu_xis),
-    #                 axis=tuple(np.arange(1, n_dim + 1)))
+    # f_w = 1 / C_wijkl...p^{ub}_ijkl...
+    # f_w = 1 / np.sum(np.einsum('i...,...->i...', bias_w_xis, pu_xis),
+    #                  axis=tuple(np.arange(1, n_dim + 1)))
     f_w = 1 / my_einsum('i...,...->i', bias_w_xis, pu_xis)
     if counter % 1000 == 0:
         print("F for each window (%d):" % (counter))
