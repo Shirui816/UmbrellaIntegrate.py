@@ -15,6 +15,7 @@ from scipy.stats import circmean
 from scipy.stats import multivariate_normal
 
 description = """WHAM.py (Gaussian KDE version).
+The Weighted Histogram Analysis Method.
 Written by Shirui shirui816@gmail.com
 Bootstrap enhance sampling method is on the way.
 I will aslo try GAN to enhance sampling.
