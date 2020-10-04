@@ -77,10 +77,11 @@ n_dim = xi_range.shape[0]
 period = np.array(alvars['period'])
 if period is None:
     period = np.array([-1] * n_dim)
-out_put_file = open(alvars['out_put'], 'w')
-out_put_file.write('#r\tPMF\tP\n')
-out_put_file.close()
-out_put_file = open(alvars['out_put'], 'a')
+# out_put_file = open(alvars['out_put'], 'w')
+# out_put_file.write('#r\tPMF\tP\n')
+# out_put_file.close()
+# out_put_file = open(alvars['out_put'], 'a')
+out_put_file = alvars['out_put']
 mode = alvars['mode']
 meta_file = open(alvars['meta_file'], 'r').readlines()
 while '' in meta_file:
@@ -177,6 +178,7 @@ while True:
         break
     pu_xis_old = pu_xis
 pmf = -kb * temperature * np.log(pu_xis_old)
-np.savetxt(out_put_file, pmf - pmf.min())  # I should also improve the output part, x, y,... pmf for example
+# np.savetxt(out_put_file, pmf - pmf.min())  # I should also improve the output part, x, y,... pmf for example
+np.save(out_put_file, pmf)
 # np.savetxt(out_put_file, np.vstack([xis, pmf - pmf.min(), pu_xis]).T, fmt="%.6f")
-out_put_file.close()
+# out_put_file.close()
