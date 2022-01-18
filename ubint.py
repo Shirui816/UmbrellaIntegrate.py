@@ -83,7 +83,7 @@ order = alvars['order']
 mode = alvars['mode']
 meta_file = open(alvars['meta_file'], 'r')
 
-kb = is_reduced or KB * NA
+kb = is_reduced or KB * NA / 1000 # kj/mol
 
 if period > 0:
     x0, xt = xi_range
@@ -165,7 +165,7 @@ for line in meta_file:
         Z_ = np.poly1d(z_)
         dz_ = np.poly1d(z_[:-1] * np.arange(order, 0, -1))
         tmp = np.exp(-Z_(delta_xis) / kbT_w)
-        n_tmp = np.sum(tmp)  # normalization factor, simple summation.
+        n_tmp = 1.  # kde is a pdf
         dAu_dxis_pb_w += (kbT_w * dz_(delta_xis) -
                           k_w * delta_xis_ref) * tmp / n_tmp
     elif mode == 'kde' and order == 0:
@@ -219,7 +219,7 @@ if min(min_) > xi_range[0] or max(min_) < xi_range[1]:
     warnings.warn("Warning, xi range exceeds the sample range!",
                   UserWarning)
 
-dAu_dxis = dAu_dxis_pb_w / pb_xi
+dAu_dxis = dAu_dxis_pb_w * pb_xi / pb_xi.sum()   # normalized probability
 if period > 0:
     dAu_dxis -= dAu_dxis.mean()  # remove the drifting
 pmf = np.array([simps(dAu_dxis[xis <= r], xis[xis <= r]) for r in xis])
