@@ -13,6 +13,7 @@ from argparse import RawTextHelpFormatter
 from scipy.stats import gaussian_kde
 from scipy.stats import circmean
 from scipy.stats import multivariate_normal
+from scipy.integrate import simps
 
 description = """WHAM.py (Gaussian KDE version).
 The Weighted Histogram Analysis Method.
@@ -75,7 +76,7 @@ max_bin = np.array(alvars['max_bin'])  # how many bins were used in integration
 xi_range = np.array(alvars['range']).reshape(-1, 2)
 n_dim = xi_range.shape[0]
 period = np.array(alvars['period'])
-if period is None:
+if period == -1:
     period = np.array([-1] * n_dim)
 # out_put_file = open(alvars['out_put'], 'w')
 # out_put_file.write('#r\tPMF\tP\n')
@@ -89,7 +90,7 @@ while '' in meta_file:
 meta_file = [_ for _ in meta_file if not re.search(r'^#', _)]
 n_windows = len(meta_file)
 
-kb = is_reduced or KB * NA
+kb = is_reduced or KB * NA /1000
 if not period.shape[0] == max_bin.shape[0] == n_dim:
     raise ValueError("Dimension is not correct!")
 x0, xt = xi_range.T
@@ -99,7 +100,8 @@ xi_range = np.array([(-period[_] / 2, period[_] / 2) if period[_] > 0 else xi_ra
 pb_w_xis = np.empty((n_windows, *max_bin))
 bias_w_xis = np.zeros((n_windows, *max_bin))
 f_w = np.ones(n_windows) / n_windows  # initial F for each window
-grid = np.meshgrid(*[np.linspace(_[0], _[1], __) for _, __ in zip(xi_range, max_bin)])
+# grid = bin centers. i.e. bin_left + 0.5 * bin_size
+grid = np.meshgrid(*[np.linspace(_[0], _[1], __, endpoint=False)+0.5 * (_[1]-_[0])/__  for _, __ in zip(xi_range, max_bin)])
 grid = np.array(grid)
 xis = np.vstack([_.ravel() for _ in grid])
 box = np.atleast_2d(period)
@@ -109,9 +111,10 @@ for i, line in enumerate(meta_file):
     # loop for each window.
     line = re.split('\s+', line.strip())
     if len(line) != 4:
-        warnings.warn("Temperature is not assigned for window %d,"
-                      "I will use the default temperature!" % (i),
-                      UserWarning)
+        #warnings.warn("Temperature is not assigned for window %d,"
+        #              "I will use the default temperature!" % (i),
+        #              UserWarning)
+        pass # warning is annoying
     window_data = np.atleast_2d(pd.read_csv(line[0], header=None, squeeze=1,
                                             delim_whitespace=True, comment='#').values[:, 1:])
     # the data is always (n_sample, n_dim), (100, 1) is 1D case, for example.
@@ -139,7 +142,7 @@ for i, line in enumerate(meta_file):
         else:
             delta_xis_ref_d = grid[d].T - xi_center_w[d]
             delta_xis[..., d] = grid[d].T - xi_mean_w[d]
-        bias_w_xis[i] += np.exp(-kbT_w * 0.5 * k_w * delta_xis_ref_d ** 2)
+        bias_w_xis[i] += np.exp(-1/kbT_w * 0.5 * k_w * delta_xis_ref_d ** 2)
     if mode == 'kde':
         kde = gaussian_kde(window_data_uwp.T)
         positions = np.vstack([_.ravel() for _ in delta_xis.swapaxes(0, -1)])
@@ -153,32 +156,42 @@ for i, line in enumerate(meta_file):
     if mode == 'gauss':
         xi_var_w = np.cov(window_data_uwp.T)
         pb_w_xis[i] = multivariate_normal.pdf(delta_xis, mean=[0] * n_dim, cov=xi_var_w)
+        #print(delta_xis.ravel())
         # kde and gauss mode share the same idea: calculate P(\xi) from "unwrapped" distribution
         # if the system is not periodic, "unwrapped" means P(\xi-\overline{\xi})
 
+
+# assuming same sample size for all windows
+# see http://membrane.urmc.rochester.edu/sites/default/files/wham/wham_talk.pdf
+# f_w here is exp(F_i / k_BT) and bias_w_xis is exp(-U_i(x)/k_BT) for windows
 pb_w_xis = pb_w_xis / pb_w_xis.sum(axis=tuple(range(1, n_dim + 1)), keepdims=True)
-pu_xis_old = np.zeros(max_bin)
 
 # WHAM iteration
 counter = 0
 while True:
+    f_w_old = f_w
     # p^{ub}_wijkl... = p^b_wijkl... / f_wC_wijkl...
     pu_xis = np.sum(pb_w_xis, axis=0) / np.einsum('i,i...->...', f_w, bias_w_xis)
-    pu_xis = pu_xis / pu_xis.sum()
+    # if not converge, try nomalize pu_xis, e.g., pu_xis = pu_xis/pu_xis.sum(), but
+    # this induces deviations in free energy
     # f_w = 1 / C_wijkl...p^{ub}_ijkl...
     # f_w = 1 / np.sum(np.einsum('i...,...->i...', bias_w_xis, pu_xis),
     #                  axis=tuple(np.arange(1, n_dim + 1)))
     f_w = 1 / my_einsum('i...,...->i', bias_w_xis, pu_xis)
-    if counter % 1000 == 0:
-        print("F for each window (%d):" % (counter))
-        for i, line in enumerate(f_w):
-            print(i, '%.4f' % (line))
+    if np.isnan(f_w).any():
+        raise ValueError("nan in free energy")
     counter += 1
-    if np.allclose(pu_xis_old, pu_xis, rtol=1e-5):
+    if np.max(np.abs(f_w_old-f_w))<1e-5:
         break
-    pu_xis_old = pu_xis
-pmf = -kb * temperature * np.log(pu_xis_old)
-# np.savetxt(out_put_file, pmf - pmf.min())  # I should also improve the output part, x, y,... pmf for example
-np.save('%s.npy' % (out_put_file), pmf)  # use .npy file
+
+print("F for each window (%d):" % (counter))
+f0 = kb*temperature * np.log(f_w[0])
+for i, line in enumerate(f_w):
+    print(i, '%.4f' % (kb*temperature * np.log(line)-f0))
+pmf = -kb * temperature * np.log(pu_xis)
+# slightly different from WHAM program if you set xi range smaller than sampled data range
+# Setting range exceeds all sampled data yields same results.
+np.savetxt(out_put_file, np.vstack([grid.ravel(),(pmf - pmf.min())]).T, fmt='%.4f')  # I should also improve the output part, x, y,... pmf for example
+#np.save('%s.npy' % (out_put_file), pmf)  # use .npy file for all dimensions
 # np.savetxt(out_put_file, np.vstack([xis, pmf - pmf.min(), pu_xis]).T, fmt="%.6f")
 # out_put_file.close()
