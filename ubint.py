@@ -174,9 +174,11 @@ for line in meta_file:
             delta_xis_ext = np.r_[delta_xis, delta_xis[-1] + dxi]
         else:
             delta_xis_ext = np.r_[delta_xis, pbc(xis[-1] + dxi - xi_mean_w, period)]
-        tmp = kde(delta_xis_ext)[:-1]
-        n_tmp = np.sum(tmp)
-        dAu_dxis_pb_w += (-kbT_w * np.diff(np.log(kde(delta_xis_ext))) / dxi
+        pr = kde(delta_xis_ext)
+        pr[pr <= 0] = 1e-10  # eliminate 0 in log
+        tmp = pr[:-1]
+        n_tmp = 1.
+        dAu_dxis_pb_w += (-kbT_w * np.diff(np.log(pr)) / dxi
                           - k_w * delta_xis_ref) * tmp / n_tmp
     elif mode == 'kastner':
         m1 = xi_mean_w
