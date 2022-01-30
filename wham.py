@@ -16,10 +16,9 @@ from scipy.stats import multivariate_normal
 from scipy.integrate import simps
 
 description = """WHAM.py (Gaussian KDE version).
-The Weighted Histogram Analysis Method.
+The Weighted Histogram Analysis Method for all diminsions.
 Written by Shirui shirui816@gmail.com
 Bootstrap enhance sampling method is on the way.
-I will aslo try GAN to enhance sampling.
 ### metafile format:
 /window/data window_center sprint_konst [Temperature]
 ### window data file format:
