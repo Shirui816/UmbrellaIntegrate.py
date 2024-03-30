@@ -126,13 +126,13 @@ for i, line in enumerate(meta_file):
                                  np.mean(window_data.T, axis=1)))
     window_data_uwp = np.where(period > 0, pbc(window_data - xi_mean_w.T, period),
                                window_data - xi_mean_w.T)
-    # unwrap data then treat circularly distributed data "flattly".
-    # I should use the circular-midpoint method.
+    # unwrap data then treat circularly distributed data "flattly".   
     # move the MEAN of the distribution to 0, only for relatively
     # symmetric distributions. If the distribution is heavily skewed,
     # the distribution should be "unwrapped" into a whole period and
     # PBC of _delta_xis should be removed, i.e., distances further than
     # half period is permitted. However, I don't think this case is physical...
+    # **use the circular-midpoint method**
     delta_xis = np.empty((*max_bin, n_dim))
     for d in range(n_dim):
         if period[d] > 0:
